@@ -1,9 +1,10 @@
 import React, {RefObject} from 'react';
 import {IAuthoringFieldV2, IAuthoringSectionTheme, IFieldsData} from 'superdesk-api';
 import {getField} from 'apps/fields';
-import {getFieldContainer} from './get-field-container';
+import {getFieldContainer, IGetFieldContainerOptions} from './get-field-container';
 import {IPropsAuthoringSection} from './authoring-section';
-import {memoize} from 'core/memoize';
+import memoizeOne from 'memoize-one';
+import {shallowEqualObjects} from 'shallow-equal';
 
 interface IProps<T> {
     field: IAuthoringFieldV2;
@@ -24,6 +25,7 @@ interface IProps<T> {
     fieldRef: RefObject<HTMLDivElement>;
     item: T;
     computeLatestEntity(options?: {preferIncomplete?: boolean}): any;
+    fieldTemplate: IGetFieldContainerOptions['fieldTemplate'];
 }
 
 export class AuthoringSectionField<T> extends React.PureComponent<IProps<T>> {
@@ -32,21 +34,22 @@ export class AuthoringSectionField<T> extends React.PureComponent<IProps<T>> {
     constructor(props: IProps<T>) {
         super(props);
 
-        this.getFieldContainer = memoize(getFieldContainer, 1);
+        this.getFieldContainer = memoizeOne(getFieldContainer, ([a], [b]) => shallowEqualObjects(a, b));
     }
 
     render() {
         const {field, fieldsData, canBeToggled, toggledOn} = this.props;
         const FieldEditorConfig = getField(field.fieldType);
 
-        const Container = this.getFieldContainer(
-            this.props.useHeaderLayout,
-            canBeToggled,
-            field,
-            toggledOn,
-            this.props.toggleField,
-            this.props.validationError,
-        );
+        const Container = this.getFieldContainer({
+            useHeaderLayout: this.props.useHeaderLayout,
+            canBeToggled: canBeToggled,
+            field: field,
+            toggledOn: toggledOn,
+            toggleField: this.props.toggleField,
+            validationError: this.props.validationError,
+            fieldTemplate: this.props.fieldTemplate,
+        });
 
         return (
             <div ref={this.props.fieldRef} data-test-id="authoring-field" data-test-value={field.id}>
